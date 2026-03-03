@@ -1,135 +1,171 @@
---// SERVICES
+# Create the upgraded ViewlyXstore Lua script with ESP Player included
+
+lua_code = r'''--[[
+    ViewlyXstore Ultimate Hub
+    Features:
+    - Fly
+    - NoClip
+    - Speed Control
+    - Player ESP
+    - Draggable UI
+    - Toggle UI (RightShift)
+]]
+
+-- SERVICES
 local Players = game:GetService("Players")
 local UIS = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
 
-local Player = Players.LocalPlayer
+local LocalPlayer = Players.LocalPlayer
 local Camera = workspace.CurrentCamera
 
---// VARIABLES
-local Character, HRP
-local FlyEnabled = false
-local NoClip = false
-local FlySpeed = 80
+-- CHARACTER
+local Character
+local HumanoidRootPart
 
-local BV, BG
-
---// CHARACTER SETUP
 local function SetupChar()
-    Character = Player.Character or Player.CharacterAdded:Wait()
-    HRP = Character:WaitForChild("HumanoidRootPart")
+    Character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
+    HumanoidRootPart = Character:WaitForChild("HumanoidRootPart")
 end
 SetupChar()
-Player.CharacterAdded:Connect(SetupChar)
+LocalPlayer.CharacterAdded:Connect(SetupChar)
 
---// CREATE UI
-local ScreenGui = Instance.new("ScreenGui", game.CoreGui)
-ScreenGui.Name = "FlyUI"
+-- SETTINGS
+local FlyEnabled = false
+local NoClipEnabled = false
+local ESPEnabled = false
+local FlySpeed = 60
+
+local BV
+local BG
+local ESPContainer = {}
+
+-- INPUT CONTROL
+local Control = {F=0,B=0,L=0,R=0,U=0,D=0}
+
+-- UI
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "ViewlyXstoreUI"
+ScreenGui.ResetOnSpawn = false
+ScreenGui.Parent = game.CoreGui
 
 local Frame = Instance.new("Frame", ScreenGui)
-Frame.Size = UDim2.new(0,200,0,150)
-Frame.Position = UDim2.new(0.05,0,0.3,0)
+Frame.Size = UDim2.new(0,220,0,220)
+Frame.Position = UDim2.new(0.5,-110,0.5,-110)
 Frame.BackgroundColor3 = Color3.fromRGB(20,20,20)
+Frame.BorderSizePixel = 0
 Frame.Active = true
 Frame.Draggable = true
 
 local Title = Instance.new("TextLabel", Frame)
-Title.Size = UDim2.new(1,0,0,30)
-Title.Text = "FLY HUB"
-Title.TextColor3 = Color3.new(1,1,1)
+Title.Size = UDim2.new(1,0,0,35)
 Title.BackgroundTransparency = 1
+Title.Text = "ViewlyXstore"
+Title.TextColor3 = Color3.fromRGB(255,255,255)
+Title.Font = Enum.Font.GothamBold
+Title.TextSize = 18
 
-local FlyBtn = Instance.new("TextButton", Frame)
-FlyBtn.Size = UDim2.new(0.9,0,0,30)
-FlyBtn.Position = UDim2.new(0.05,0,0.3,0)
-FlyBtn.Text = "Fly: OFF"
-FlyBtn.BackgroundColor3 = Color3.fromRGB(40,40,40)
-FlyBtn.TextColor3 = Color3.new(1,1,1)
+local function CreateButton(y,text)
+    local btn = Instance.new("TextButton", Frame)
+    btn.Size = UDim2.new(1,-20,0,30)
+    btn.Position = UDim2.new(0,10,0,y)
+    btn.BackgroundColor3 = Color3.fromRGB(35,35,35)
+    btn.TextColor3 = Color3.fromRGB(255,255,255)
+    btn.Font = Enum.Font.Gotham
+    btn.TextSize = 14
+    btn.Text = text
+    return btn
+end
 
-local NoClipBtn = Instance.new("TextButton", Frame)
-NoClipBtn.Size = UDim2.new(0.9,0,0,30)
-NoClipBtn.Position = UDim2.new(0.05,0,0.55,0)
-NoClipBtn.Text = "NoClip: OFF"
-NoClipBtn.BackgroundColor3 = Color3.fromRGB(40,40,40)
-NoClipBtn.TextColor3 = Color3.new(1,1,1)
+local FlyBtn = CreateButton(45,"Fly: OFF")
+local NoClipBtn = CreateButton(80,"NoClip: OFF")
+local ESPBtn = CreateButton(115,"ESP Player: OFF")
+local SpeedBtn = CreateButton(150,"Speed: 60")
 
-local SpeedLabel = Instance.new("TextLabel", Frame)
-SpeedLabel.Size = UDim2.new(1,0,0,20)
-SpeedLabel.Position = UDim2.new(0,0,0.8,0)
-SpeedLabel.BackgroundTransparency = 1
-SpeedLabel.TextColor3 = Color3.new(1,1,1)
-SpeedLabel.Text = "Speed: "..FlySpeed
+-- FLY
+local function StartFly()
+    BV = Instance.new("BodyVelocity")
+    BV.MaxForce = Vector3.new(1e5,1e5,1e5)
+    BV.Velocity = Vector3.zero
+    BV.Parent = HumanoidRootPart
 
---// FLY FUNCTIONS
-local function ToggleFly()
-    FlyEnabled = not FlyEnabled
-    FlyBtn.Text = "Fly: "..(FlyEnabled and "ON" or "OFF")
+    BG = Instance.new("BodyGyro")
+    BG.MaxTorque = Vector3.new(1e5,1e5,1e5)
+    BG.P = 1e4
+    BG.CFrame = HumanoidRootPart.CFrame
+    BG.Parent = HumanoidRootPart
+end
 
-    if FlyEnabled then
-        BV = Instance.new("BodyVelocity", HRP)
-        BV.MaxForce = Vector3.new(1e5,1e5,1e5)
+local function StopFly()
+    if BV then BV:Destroy() end
+    if BG then BG:Destroy() end
+end
 
-        BG = Instance.new("BodyGyro", HRP)
-        BG.MaxTorque = Vector3.new(1e5,1e5,1e5)
-        BG.P = 1e4
-    else
-        if BV then BV:Destroy() end
-        if BG then BG:Destroy() end
+-- ESP SYSTEM
+local function CreateESP(player)
+    if player == LocalPlayer then return end
+    if ESPContainer[player] then return end
+
+    local highlight = Instance.new("Highlight")
+    highlight.FillTransparency = 1
+    highlight.OutlineTransparency = 0
+    highlight.Parent = game.CoreGui
+
+    local function attach()
+        if player.Character then
+            highlight.Adornee = player.Character
+        end
+    end
+
+    attach()
+    player.CharacterAdded:Connect(attach)
+
+    ESPContainer[player] = highlight
+end
+
+local function RemoveESP(player)
+    if ESPContainer[player] then
+        ESPContainer[player]:Destroy()
+        ESPContainer[player] = nil
     end
 end
 
-FlyBtn.MouseButton1Click:Connect(ToggleFly)
+local function ToggleESP(state)
+    ESPEnabled = state
+    if state then
+        for _,p in pairs(Players:GetPlayers()) do
+            CreateESP(p)
+        end
+    else
+        for p,_ in pairs(ESPContainer) do
+            RemoveESP(p)
+        end
+    end
+end
 
-NoClipBtn.MouseButton1Click:Connect(function()
-    NoClip = not NoClip
-    NoClipBtn.Text = "NoClip: "..(NoClip and "ON" or "OFF")
-end)
-
---// SPEED CHANGE (SCROLL)
-UIS.InputChanged:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseWheel then
-        FlySpeed = math.clamp(FlySpeed + input.Position.Z*5,20,200)
-        SpeedLabel.Text = "Speed: "..FlySpeed
+Players.PlayerAdded:Connect(function(p)
+    if ESPEnabled then
+        CreateESP(p)
     end
 end)
 
---// MOVEMENT
-local Control = {F=0,B=0,L=0,R=0,U=0,D=0}
-
-UIS.InputBegan:Connect(function(i,g)
-    if g then return end
-    if i.KeyCode == Enum.KeyCode.W then Control.F=1 end
-    if i.KeyCode == Enum.KeyCode.S then Control.B=-1 end
-    if i.KeyCode == Enum.KeyCode.A then Control.L=-1 end
-    if i.KeyCode == Enum.KeyCode.D then Control.R=1 end
-    if i.KeyCode == Enum.KeyCode.Space then Control.U=1 end
-    if i.KeyCode == Enum.KeyCode.LeftControl then Control.D=-1 end
+Players.PlayerRemoving:Connect(function(p)
+    RemoveESP(p)
 end)
 
-UIS.InputEnded:Connect(function(i)
-    if i.KeyCode == Enum.KeyCode.W then Control.F=0 end
-    if i.KeyCode == Enum.KeyCode.S then Control.B=0 end
-    if i.KeyCode == Enum.KeyCode.A then Control.L=0 end
-    if i.KeyCode == Enum.KeyCode.D then Control.R=0 end
-    if i.KeyCode == Enum.KeyCode.Space then Control.U=0 end
-    if i.KeyCode == Enum.KeyCode.LeftControl then Control.D=0 end
-end)
-
---// MAIN LOOP
+-- LOOP
 RunService.RenderStepped:Connect(function()
-    if FlyEnabled and HRP and BV then
+    if FlyEnabled and BV and BG then
         local camCF = Camera.CFrame
+        local move = (camCF.LookVector*(Control.F+Control.B) +
+                     camCF.RightVector*(Control.R+Control.L) +
+                     camCF.UpVector*(Control.U+Control.D))
 
-        local move =
-            camCF.LookVector*(Control.F+Control.B)+
-            camCF.RightVector*(Control.R+Control.L)+
-            Vector3.new(0,Control.U+Control.D,0)
-
-        BV.Velocity = move.Magnitude>0 and move.Unit*FlySpeed or Vector3.zero
+        BV.Velocity = move * FlySpeed
         BG.CFrame = camCF
     end
 
-    if NoClip and Character then
+    if NoClipEnabled and Character then
         for _,v in pairs(Character:GetDescendants()) do
             if v:IsA("BasePart") then
                 v.CanCollide = false
@@ -137,3 +173,60 @@ RunService.RenderStepped:Connect(function()
         end
     end
 end)
+
+-- INPUT
+UIS.InputBegan:Connect(function(i,g)
+    if g then return end
+
+    if i.KeyCode == Enum.KeyCode.W then Control.F = 1 end
+    if i.KeyCode == Enum.KeyCode.S then Control.B = -1 end
+    if i.KeyCode == Enum.KeyCode.A then Control.L = -1 end
+    if i.KeyCode == Enum.KeyCode.D then Control.R = 1 end
+    if i.KeyCode == Enum.KeyCode.Space then Control.U = 1 end
+    if i.KeyCode == Enum.KeyCode.LeftControl then Control.D = -1 end
+
+    if i.KeyCode == Enum.KeyCode.RightShift then
+        Frame.Visible = not Frame.Visible
+    end
+end)
+
+UIS.InputEnded:Connect(function(i)
+    if i.KeyCode == Enum.KeyCode.W then Control.F = 0 end
+    if i.KeyCode == Enum.KeyCode.S then Control.B = 0 end
+    if i.KeyCode == Enum.KeyCode.A then Control.L = 0 end
+    if i.KeyCode == Enum.KeyCode.D then Control.R = 0 end
+    if i.KeyCode == Enum.KeyCode.Space then Control.U = 0 end
+    if i.KeyCode == Enum.KeyCode.LeftControl then Control.D = 0 end
+end)
+
+-- BUTTONS
+FlyBtn.MouseButton1Click:Connect(function()
+    FlyEnabled = not FlyEnabled
+    FlyBtn.Text = "Fly: "..(FlyEnabled and "ON" or "OFF")
+    if FlyEnabled then StartFly() else StopFly() end
+end)
+
+NoClipBtn.MouseButton1Click:Connect(function()
+    NoClipEnabled = not NoClipEnabled
+    NoClipBtn.Text = "NoClip: "..(NoClipEnabled and "ON" or "OFF")
+end)
+
+ESPBtn.MouseButton1Click:Connect(function()
+    ToggleESP(not ESPEnabled)
+    ESPBtn.Text = "ESP Player: "..(ESPEnabled and "ON" or "OFF")
+end)
+
+SpeedBtn.MouseButton1Click:Connect(function()
+    FlySpeed += 20
+    if FlySpeed > 200 then FlySpeed = 20 end
+    SpeedBtn.Text = "Speed: "..FlySpeed
+end)
+
+print("ViewlyXstore Ultimate Loaded")
+'''
+
+file_path = "/mnt/data/viewlyxstore_main.lua"
+with open(file_path, "w", encoding="utf-8") as f:
+    f.write(lua_code)
+
+file_path
