@@ -1,40 +1,30 @@
--- SERVICES
+--// SERVICES
 local Players = game:GetService("Players")
 local UIS = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
 
-local LocalPlayer = Players.LocalPlayer
+local Player = Players.LocalPlayer
 local Camera = workspace.CurrentCamera
 
--- SETTINGS
+--// SETTINGS
 local FlyEnabled = false
 local FlySpeed = 80
 
--- CHARACTER
-local Character
-local HumanoidRootPart
+--// VARIABLES
+local Character, HRP
+local BV, BG
 
-local BV
-local BG
-
--- GET CHARACTER
+--// GET CHARACTER
 local function SetupChar()
-    Character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
-    HumanoidRootPart = Character:WaitForChild("HumanoidRootPart")
+    Character = Player.Character or Player.CharacterAdded:Wait()
+    HRP = Character:WaitForChild("HumanoidRootPart")
 end
 
 SetupChar()
-LocalPlayer.CharacterAdded:Connect(SetupChar)
+Player.CharacterAdded:Connect(SetupChar)
 
--- INPUT
-local Control = {
-    F = 0,
-    B = 0,
-    L = 0,
-    R = 0,
-    U = 0,
-    D = 0
-}
+--// MOVEMENT
+local Control = {F=0,B=0,L=0,R=0,U=0,D=0}
 
 UIS.InputBegan:Connect(function(i,g)
     if g then return end
@@ -46,21 +36,21 @@ UIS.InputBegan:Connect(function(i,g)
     if i.KeyCode == Enum.KeyCode.Space then Control.U = 1 end
     if i.KeyCode == Enum.KeyCode.LeftControl then Control.D = -1 end
 
-    -- TOGGLE FLY (F KEY)
-    if i.KeyCode == Enum.KeyCode.F then
+    -- TOGGLE FLY
+    if i.KeyCode == Enum.KeyCode.E then
         FlyEnabled = not FlyEnabled
 
         if FlyEnabled then
             BV = Instance.new("BodyVelocity")
             BV.MaxForce = Vector3.new(1e5,1e5,1e5)
             BV.Velocity = Vector3.zero
-            BV.Parent = HumanoidRootPart
+            BV.Parent = HRP
 
             BG = Instance.new("BodyGyro")
             BG.MaxTorque = Vector3.new(1e5,1e5,1e5)
             BG.P = 1e4
-            BG.CFrame = HumanoidRootPart.CFrame
-            BG.Parent = HumanoidRootPart
+            BG.CFrame = HRP.CFrame
+            BG.Parent = HRP
         else
             if BV then BV:Destroy() end
             if BG then BG:Destroy() end
@@ -77,9 +67,9 @@ UIS.InputEnded:Connect(function(i)
     if i.KeyCode == Enum.KeyCode.LeftControl then Control.D = 0 end
 end)
 
--- FLY LOOP
+--// FLY LOOP
 RunService.RenderStepped:Connect(function()
-    if not FlyEnabled or not BV then return end
+    if not FlyEnabled or not HRP then return end
 
     local camCF = Camera.CFrame
 
@@ -88,8 +78,11 @@ RunService.RenderStepped:Connect(function()
         camCF.RightVector * (Control.R + Control.L) +
         Vector3.new(0, Control.U + Control.D, 0)
 
-    BV.Velocity = move * FlySpeed
+    if move.Magnitude > 0 then
+        BV.Velocity = move.Unit * FlySpeed
+    else
+        BV.Velocity = Vector3.zero
+    end
+
     BG.CFrame = camCF
 end)
-
-print("Fly Loaded | Press F to Toggle")
