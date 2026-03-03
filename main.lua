@@ -22,126 +22,66 @@ end
 SetupChar()
 Player.CharacterAdded:Connect(SetupChar)
 
---// CREATE UI
---// SERVICES
-local Players = game:GetService("Players")
-local UIS = game:GetService("UserInputService")
+--// UI
+local FlySpeed = 16
 
---// MAIN GUI
-local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Parent = game.CoreGui
+local ScreenGui = Instance.new("ScreenGui", game.CoreGui)
 ScreenGui.Name = "FlyUI"
-ScreenGui.ResetOnSpawn = false
 
---// MAIN FRAME
-local Frame = Instance.new("Frame")
-Frame.Parent = ScreenGui
-Frame.Size = UDim2.new(0, 230, 0, 190)
-Frame.Position = UDim2.new(0.05, 0, 0.3, 0)
-Frame.BackgroundColor3 = Color3.fromRGB(15, 25, 45)
+local Frame = Instance.new("Frame", ScreenGui)
+Frame.Size = UDim2.new(0,200,0,150)
+Frame.Position = UDim2.new(0.05,0,0.3,0)
+Frame.BackgroundColor3 = Color3.fromRGB(10,25,60) -- ฟ้าเข้ม
 Frame.Active = true
 Frame.Draggable = true
 
-Instance.new("UICorner", Frame).CornerRadius = UDim.new(0,16)
+-- ทำมุมโค้ง
+local UICorner = Instance.new("UICorner", Frame)
+UICorner.CornerRadius = UDim.new(0,12)
 
-local Stroke = Instance.new("UIStroke", Frame)
-Stroke.Color = Color3.fromRGB(0,170,255)
-Stroke.Thickness = 2
+-- เส้นขอบฟ้าเรือง ๆ
+local UIStroke = Instance.new("UIStroke", Frame)
+UIStroke.Color = Color3.fromRGB(0,170,255)
+UIStroke.Thickness = 2
 
-local Gradient = Instance.new("UIGradient", Frame)
-Gradient.Color = ColorSequence.new{
-	ColorSequenceKeypoint.new(0, Color3.fromRGB(0,140,255)),
-	ColorSequenceKeypoint.new(1, Color3.fromRGB(0,80,200))
-}
-Gradient.Rotation = 90
-
---// TITLE
-local Title = Instance.new("TextLabel")
-Title.Parent = Frame
-Title.Size = UDim2.new(1,0,0,35)
-Title.BackgroundTransparency = 1
+local Title = Instance.new("TextLabel", Frame)
+Title.Size = UDim2.new(1,0,0,30)
 Title.Text = "ViewlyXstore"
+Title.TextColor3 = Color3.fromRGB(0,200,255)
+Title.BackgroundTransparency = 1
 Title.Font = Enum.Font.GothamBold
-Title.TextSize = 18
-Title.TextColor3 = Color3.new(1,1,1)
+Title.TextSize = 16
 
---// CONTAINER
-local Container = Instance.new("Frame")
-Container.Parent = Frame
-Container.Size = UDim2.new(1,0,1,-40)
-Container.Position = UDim2.new(0,0,0,40)
-Container.BackgroundTransparency = 1
+local FlyBtn = Instance.new("TextButton", Frame)
+FlyBtn.Size = UDim2.new(0.9,0,0,30)
+FlyBtn.Position = UDim2.new(0.05,0,0.3,0)
+FlyBtn.Text = "Fly: OFF"
+FlyBtn.BackgroundColor3 = Color3.fromRGB(0,120,255) -- ฟ้า
+FlyBtn.TextColor3 = Color3.new(1,1,1)
+FlyBtn.Font = Enum.Font.GothamSemibold
+FlyBtn.TextSize = 14
 
-local Layout = Instance.new("UIListLayout", Container)
-Layout.Padding = UDim.new(0,10)
-Layout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+Instance.new("UICorner", FlyBtn).CornerRadius = UDim.new(0,10)
 
---// BUTTON STYLE FUNCTION
-local function createButton(text)
-	local Btn = Instance.new("TextButton")
-	Btn.Size = UDim2.new(0.9,0,0,35)
-	Btn.BackgroundColor3 = Color3.fromRGB(25,35,60)
-	Btn.TextColor3 = Color3.new(1,1,1)
-	Btn.TextSize = 14
-	Btn.Font = Enum.Font.GothamSemibold
-	Btn.Text = text
-	
-	Instance.new("UICorner", Btn).CornerRadius = UDim.new(0,12)
-	
-	local HoverStroke = Instance.new("UIStroke", Btn)
-	HoverStroke.Color = Color3.fromRGB(0,170,255)
-	HoverStroke.Thickness = 0
-	
-	-- Hover Effect
-	Btn.MouseEnter:Connect(function()
-		HoverStroke.Thickness = 2
-	end)
-	
-	Btn.MouseLeave:Connect(function()
-		HoverStroke.Thickness = 0
-	end)
-	
-	Btn.Parent = Container
-	return Btn
-end
+local NoClipBtn = Instance.new("TextButton", Frame)
+NoClipBtn.Size = UDim2.new(0.9,0,0,30)
+NoClipBtn.Position = UDim2.new(0.05,0,0.55,0)
+NoClipBtn.Text = "NoClip: OFF"
+NoClipBtn.BackgroundColor3 = Color3.fromRGB(0,120,255)
+NoClipBtn.TextColor3 = Color3.new(1,1,1)
+NoClipBtn.Font = Enum.Font.GothamSemibold
+NoClipBtn.TextSize = 14
 
---// BUTTONS
-local FlyBtn = createButton("Fly: OFF")
-local NoClipBtn = createButton("NoClip: OFF")
-local SpeedBtn = createButton("Speed: 16")
+Instance.new("UICorner", NoClipBtn).CornerRadius = UDim.new(0,10)
 
---// TOGGLE LOGIC
-local FlyEnabled = false
-FlyBtn.MouseButton1Click:Connect(function()
-	FlyEnabled = not FlyEnabled
-	FlyBtn.Text = FlyEnabled and "Fly: ON" or "Fly: OFF"
-	FlyBtn.BackgroundColor3 = FlyEnabled and Color3.fromRGB(0,170,255) or Color3.fromRGB(25,35,60)
-end)
-
-local NoClipEnabled = false
-NoClipBtn.MouseButton1Click:Connect(function()
-	NoClipEnabled = not NoClipEnabled
-	NoClipBtn.Text = NoClipEnabled and "NoClip: ON" or "NoClip: OFF"
-	NoClipBtn.BackgroundColor3 = NoClipEnabled and Color3.fromRGB(0,170,255) or Color3.fromRGB(25,35,60)
-end)
-
-local Speed = 16
-SpeedBtn.MouseButton1Click:Connect(function()
-	Speed = Speed + 10
-	if Speed > 100 then
-		Speed = 16
-	end
-	SpeedBtn.Text = "Speed: "..Speed
-end)
-
---// TOGGLE UI (RightShift)
-UIS.InputBegan:Connect(function(input, gpe)
-	if gpe then return end
-	if input.KeyCode == Enum.KeyCode.RightShift then
-		Frame.Visible = not Frame.Visible
-	end
-end)
-
+local SpeedLabel = Instance.new("TextLabel", Frame)
+SpeedLabel.Size = UDim2.new(1,0,0,20)
+SpeedLabel.Position = UDim2.new(0,0,0.8,0)
+SpeedLabel.BackgroundTransparency = 1
+SpeedLabel.TextColor3 = Color3.fromRGB(150,220,255)
+SpeedLabel.Font = Enum.Font.Gotham
+SpeedLabel.TextSize = 14
+SpeedLabel.Text = "Speed: "..FlySpeed
 --// FLY FUNCTIONS
 local function ToggleFly()
     FlyEnabled = not FlyEnabled
