@@ -1,161 +1,246 @@
---// SERVICES
-local Players = game:GetService("Players")
+-- ViewlyXstore V3 Hub
+-- UI Framework + Tabs + Toggle + Slider + Keybind + Notification
+
 local UIS = game:GetService("UserInputService")
-local RunService = game:GetService("RunService")
+local TweenService = game:GetService("TweenService")
+local Players = game:GetService("Players")
 
-local Player = Players.LocalPlayer
-local Camera = workspace.CurrentCamera
+local player = Players.LocalPlayer
 
---// VARIABLES
-local Character, HRP
-local FlyEnabled = false
-local NoClip = false
-local FlySpeed = 80
+-- GUI
+local gui = Instance.new("ScreenGui")
+gui.Name = "ViewlyXstore"
+gui.ResetOnSpawn = false
+gui.Parent = game.CoreGui
 
-local BV, BG
+-- MAIN FRAME
+local main = Instance.new("Frame",gui)
+main.Size = UDim2.new(0,420,0,320)
+main.Position = UDim2.new(0.5,-210,0.5,-160)
+main.BackgroundColor3 = Color3.fromRGB(22,22,22)
+main.BorderSizePixel = 0
 
---// CHARACTER SETUP
-local function SetupChar()
-    Character = Player.Character or Player.CharacterAdded:Wait()
-    HRP = Character:WaitForChild("HumanoidRootPart")
-end
-SetupChar()
-Player.CharacterAdded:Connect(SetupChar)
+Instance.new("UICorner",main).CornerRadius = UDim.new(0,8)
 
---// UI
-local FlySpeed = 16
+-- TITLE
+local title = Instance.new("TextLabel",main)
+title.Size = UDim2.new(1,0,0,40)
+title.BackgroundTransparency = 1
+title.Text = "ViewlyXstore V3"
+title.Font = Enum.Font.GothamBold
+title.TextSize = 18
+title.TextColor3 = Color3.new(1,1,1)
 
-local ScreenGui = Instance.new("ScreenGui", game.CoreGui)
-ScreenGui.Name = "FlyUI"
+-- TAB BAR
+local tabBar = Instance.new("Frame",main)
+tabBar.Size = UDim2.new(1,0,0,35)
+tabBar.Position = UDim2.new(0,0,0,40)
+tabBar.BackgroundTransparency = 1
 
-local Frame = Instance.new("Frame", ScreenGui)
-Frame.Size = UDim2.new(0,200,0,150)
-Frame.Position = UDim2.new(0.05,0,0.3,0)
-Frame.BackgroundColor3 = Color3.fromRGB(10,25,60) -- ฟ้าเข้ม
-Frame.Active = true
-Frame.Draggable = true
+-- CONTENT
+local content = Instance.new("Frame",main)
+content.Size = UDim2.new(1,0,1,-75)
+content.Position = UDim2.new(0,0,0,75)
+content.BackgroundTransparency = 1
 
--- ทำมุมโค้ง
-local UICorner = Instance.new("UICorner", Frame)
-UICorner.CornerRadius = UDim.new(0,12)
+-- DRAG SYSTEM
+local drag = false
+local dragInput
+local start
+local startPos
 
--- เส้นขอบฟ้าเรือง ๆ
-local UIStroke = Instance.new("UIStroke", Frame)
-UIStroke.Color = Color3.fromRGB(0,170,255)
-UIStroke.Thickness = 2
-
-local Title = Instance.new("TextLabel", Frame)
-Title.Size = UDim2.new(1,0,0,30)
-Title.Text = "ViewlyXstore"
-Title.TextColor3 = Color3.fromRGB(0,200,255)
-Title.BackgroundTransparency = 1
-Title.Font = Enum.Font.GothamBold
-Title.TextSize = 16
-
-local FlyBtn = Instance.new("TextButton", Frame)
-FlyBtn.Size = UDim2.new(0.9,0,0,30)
-FlyBtn.Position = UDim2.new(0.05,0,0.3,0)
-FlyBtn.Text = "Fly: OFF"
-FlyBtn.BackgroundColor3 = Color3.fromRGB(0,120,255) -- ฟ้า
-FlyBtn.TextColor3 = Color3.new(1,1,1)
-FlyBtn.Font = Enum.Font.GothamSemibold
-FlyBtn.TextSize = 14
-
-Instance.new("UICorner", FlyBtn).CornerRadius = UDim.new(0,10)
-
-local NoClipBtn = Instance.new("TextButton", Frame)
-NoClipBtn.Size = UDim2.new(0.9,0,0,30)
-NoClipBtn.Position = UDim2.new(0.05,0,0.55,0)
-NoClipBtn.Text = "NoClip: OFF"
-NoClipBtn.BackgroundColor3 = Color3.fromRGB(0,120,255)
-NoClipBtn.TextColor3 = Color3.new(1,1,1)
-NoClipBtn.Font = Enum.Font.GothamSemibold
-NoClipBtn.TextSize = 14
-
-Instance.new("UICorner", NoClipBtn).CornerRadius = UDim.new(0,10)
-
-local SpeedLabel = Instance.new("TextLabel", Frame)
-SpeedLabel.Size = UDim2.new(1,0,0,20)
-SpeedLabel.Position = UDim2.new(0,0,0.8,0)
-SpeedLabel.BackgroundTransparency = 1
-SpeedLabel.TextColor3 = Color3.fromRGB(150,220,255)
-SpeedLabel.Font = Enum.Font.Gotham
-SpeedLabel.TextSize = 14
-SpeedLabel.Text = "Speed: "..FlySpeed
---// FLY FUNCTIONS
-local function ToggleFly()
-    FlyEnabled = not FlyEnabled
-    FlyBtn.Text = "Fly: "..(FlyEnabled and "ON" or "OFF")
-
-    if FlyEnabled then
-        BV = Instance.new("BodyVelocity", HRP)
-        BV.MaxForce = Vector3.new(1e5,1e5,1e5)
-
-        BG = Instance.new("BodyGyro", HRP)
-        BG.MaxTorque = Vector3.new(1e5,1e5,1e5)
-        BG.P = 1e4
-    else
-        if BV then BV:Destroy() end
-        if BG then BG:Destroy() end
-    end
-end
-
-FlyBtn.MouseButton1Click:Connect(ToggleFly)
-
-NoClipBtn.MouseButton1Click:Connect(function()
-    NoClip = not NoClip
-    NoClipBtn.Text = "NoClip: "..(NoClip and "ON" or "OFF")
+title.InputBegan:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseButton1 then
+		drag = true
+		start = input.Position
+		startPos = main.Position
+	end
 end)
 
---// SPEED CHANGE (SCROLL)
 UIS.InputChanged:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseWheel then
-        FlySpeed = math.clamp(FlySpeed + input.Position.Z*5,20,200)
-        SpeedLabel.Text = "Speed: "..FlySpeed
-    end
+	if drag and input.UserInputType == Enum.UserInputType.MouseMovement then
+		local delta = input.Position - start
+		main.Position = UDim2.new(
+			startPos.X.Scale,
+			startPos.X.Offset + delta.X,
+			startPos.Y.Scale,
+			startPos.Y.Offset + delta.Y
+		)
+	end
 end)
 
---// MOVEMENT
-local Control = {F=0,B=0,L=0,R=0,U=0,D=0}
-
-UIS.InputBegan:Connect(function(i,g)
-    if g then return end
-    if i.KeyCode == Enum.KeyCode.W then Control.F=1 end
-    if i.KeyCode == Enum.KeyCode.S then Control.B=-1 end
-    if i.KeyCode == Enum.KeyCode.A then Control.L=-1 end
-    if i.KeyCode == Enum.KeyCode.D then Control.R=1 end
-    if i.KeyCode == Enum.KeyCode.Space then Control.U=1 end
-    if i.KeyCode == Enum.KeyCode.LeftControl then Control.D=-1 end
+UIS.InputEnded:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseButton1 then
+		drag = false
+	end
 end)
 
-UIS.InputEnded:Connect(function(i)
-    if i.KeyCode == Enum.KeyCode.W then Control.F=0 end
-    if i.KeyCode == Enum.KeyCode.S then Control.B=0 end
-    if i.KeyCode == Enum.KeyCode.A then Control.L=0 end
-    if i.KeyCode == Enum.KeyCode.D then Control.R=0 end
-    if i.KeyCode == Enum.KeyCode.Space then Control.U=0 end
-    if i.KeyCode == Enum.KeyCode.LeftControl then Control.D=0 end
+-- KEYBIND (RightShift)
+UIS.InputBegan:Connect(function(input,gp)
+	if gp then return end
+	if input.KeyCode == Enum.KeyCode.RightShift then
+		main.Visible = not main.Visible
+	end
 end)
 
---// MAIN LOOP
-RunService.RenderStepped:Connect(function()
-    if FlyEnabled and HRP and BV then
-        local camCF = Camera.CFrame
+-- TAB SYSTEM
+local tabs = {}
+local currentTab
 
-        local move =
-            camCF.LookVector*(Control.F+Control.B)+
-            camCF.RightVector*(Control.R+Control.L)+
-            Vector3.new(0,Control.U+Control.D,0)
+function createTab(name)
 
-        BV.Velocity = move.Magnitude>0 and move.Unit*FlySpeed or Vector3.zero
-        BG.CFrame = camCF
-    end
+	local btn = Instance.new("TextButton",tabBar)
+	btn.Size = UDim2.new(0,120,1,0)
+	btn.Text = name
+	btn.BackgroundColor3 = Color3.fromRGB(30,30,30)
+	btn.TextColor3 = Color3.new(1,1,1)
+	btn.Font = Enum.Font.Gotham
+	btn.TextSize = 14
 
-    if NoClip and Character then
-        for _,v in pairs(Character:GetDescendants()) do
-            if v:IsA("BasePart") then
-                v.CanCollide = false
-            end
-        end
-    end
-end)
+	local page = Instance.new("Frame",content)
+	page.Size = UDim2.new(1,0,1,0)
+	page.Visible = false
+	page.BackgroundTransparency = 1
+
+	btn.MouseButton1Click:Connect(function()
+
+		if currentTab then
+			currentTab.Visible = false
+		end
+
+		page.Visible = true
+		currentTab = page
+
+	end)
+
+	table.insert(tabs,btn)
+
+	if #tabs == 1 then
+		page.Visible = true
+		currentTab = page
+	end
+
+	for i,v in pairs(tabs) do
+		v.Position = UDim2.new(0,(i-1)*130,0,0)
+	end
+
+	return page
+
+end
+
+-- UI ELEMENTS
+
+function createToggle(parent,text)
+
+	local btn = Instance.new("TextButton",parent)
+	btn.Size = UDim2.new(0,180,0,30)
+	btn.Text = text.." : OFF"
+	btn.BackgroundColor3 = Color3.fromRGB(35,35,35)
+	btn.TextColor3 = Color3.new(1,1,1)
+	btn.Font = Enum.Font.Gotham
+	btn.TextSize = 13
+
+	local state = false
+
+	btn.MouseButton1Click:Connect(function()
+
+		state = not state
+		btn.Text = text.." : "..(state and "ON" or "OFF")
+
+	end)
+
+	return btn
+
+end
+
+function createSlider(parent,text,min,max)
+
+	local frame = Instance.new("Frame",parent)
+	frame.Size = UDim2.new(0,200,0,40)
+	frame.BackgroundTransparency = 1
+
+	local label = Instance.new("TextLabel",frame)
+	label.Size = UDim2.new(1,0,0,20)
+	label.BackgroundTransparency = 1
+	label.Text = text.." : "..min
+	label.TextColor3 = Color3.new(1,1,1)
+	label.Font = Enum.Font.Gotham
+	label.TextSize = 12
+
+	local bar = Instance.new("Frame",frame)
+	bar.Size = UDim2.new(1,0,0,6)
+	bar.Position = UDim2.new(0,0,0,25)
+	bar.BackgroundColor3 = Color3.fromRGB(40,40,40)
+
+	local fill = Instance.new("Frame",bar)
+	fill.Size = UDim2.new(0,0,1,0)
+	fill.BackgroundColor3 = Color3.fromRGB(0,170,255)
+
+	local value = min
+
+	bar.InputBegan:Connect(function(input)
+		if input.UserInputType == Enum.UserInputType.MouseButton1 then
+
+			local pos = (input.Position.X - bar.AbsolutePosition.X)/bar.AbsoluteSize.X
+			pos = math.clamp(pos,0,1)
+
+			fill.Size = UDim2.new(pos,0,1,0)
+
+			value = math.floor(min + (max-min)*pos)
+
+			label.Text = text.." : "..value
+
+		end
+	end)
+
+	return frame
+
+end
+
+-- NOTIFICATION
+function notify(msg)
+
+	local note = Instance.new("TextLabel",gui)
+	note.Size = UDim2.new(0,260,0,40)
+	note.Position = UDim2.new(1,-270,1,-80)
+	note.BackgroundColor3 = Color3.fromRGB(30,30,30)
+	note.TextColor3 = Color3.new(1,1,1)
+	note.Text = msg
+	note.Font = Enum.Font.Gotham
+	note.TextSize = 14
+
+	Instance.new("UICorner",note)
+
+	TweenService:Create(note,TweenInfo.new(.4),{
+		Position = UDim2.new(1,-270,1,-120)
+	}):Play()
+
+	task.wait(3)
+
+	note:Destroy()
+
+end
+
+-- CREATE TABS
+local playerTab = createTab("Player")
+local visualTab = createTab("Visual")
+local settingsTab = createTab("Settings")
+
+-- PLAYER TAB
+local t1 = createToggle(playerTab,"Feature Toggle")
+t1.Position = UDim2.new(0,10,0,10)
+
+local s1 = createSlider(playerTab,"Speed",10,200)
+s1.Position = UDim2.new(0,10,0,60)
+
+-- VISUAL TAB
+local t2 = createToggle(visualTab,"Visual Toggle")
+t2.Position = UDim2.new(0,10,0,10)
+
+-- SETTINGS TAB
+local t3 = createToggle(settingsTab,"Enable UI Effects")
+t3.Position = UDim2.new(0,10,0,10)
+
+notify("ViewlyXstore V3 Loaded")
+
+print("ViewlyXstore V3 Hub Ready")
