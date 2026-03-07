@@ -1,88 +1,133 @@
--- ViewlyXstore V3
--- Modern Hub UI
+-- VIEWLYXSTORE V5
 
 local Players = game:GetService("Players")
 local UIS = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
-local Camera = workspace.CurrentCamera
 
 local Player = Players.LocalPlayer
-local Character = Player.Character or Player.CharacterAdded:Wait()
+local Camera = workspace.CurrentCamera
+local Mouse = Player:GetMouse()
 
 -- SETTINGS
-local FlyEnabled = false
-local NoClip = false
-local FlySpeed = 60
+local Fly = false
 local TurboFly = false
+local NoClip = false
+local InfiniteJump = false
 
-local ESPEnabled = false
+local ESP = false
 local RainbowESP = false
 
 local Aimbot = false
+local AimKey = Enum.UserInputType.MouseButton2
+
+local Speed = 60
 local FOV = 120
+local Smooth = 0.15
 
 -- GUI
 local gui = Instance.new("ScreenGui")
-gui.Name = "ViewlyXstoreV3"
-gui.Parent = Player.PlayerGui
+gui.Name = "ViewlyXstore"
+gui.Parent = game.CoreGui
 
-local Main = Instance.new("Frame",gui)
-Main.Size = UDim2.new(0,720,0,420)
-Main.Position = UDim2.new(.5,-360,.5,-210)
-Main.BackgroundColor3 = Color3.fromRGB(20,20,20)
-Main.BorderSizePixel = 0
+-- MAIN WINDOW
+local main = Instance.new("Frame",gui)
+main.Size = UDim2.new(0,780,0,460)
+main.Position = UDim2.new(0.5,-390,0.5,-230)
+main.BackgroundColor3 = Color3.fromRGB(22,22,22)
+main.BorderSizePixel = 0
+main.Active = true
+main.Draggable = true
 
-Instance.new("UICorner",Main)
+Instance.new("UICorner",main).CornerRadius = UDim.new(0,8)
 
 -- SIDEBAR
+local sidebar = Instance.new("Frame",main)
+sidebar.Size = UDim2.new(0,170,1,0)
+sidebar.BackgroundColor3 = Color3.fromRGB(17,17,17)
 
-local Sidebar = Instance.new("Frame",Main)
-Sidebar.Size = UDim2.new(0,180,1,0)
-Sidebar.BackgroundColor3 = Color3.fromRGB(15,15,15)
-Sidebar.BorderSizePixel = 0
+local layout = Instance.new("UIListLayout",sidebar)
+layout.Padding = UDim.new(0,6)
 
-local Layout = Instance.new("UIListLayout",Sidebar)
-Layout.Padding = UDim.new(0,6)
+local function Tab(name)
 
-local Title = Instance.new("TextLabel",Sidebar)
-Title.Text = "ViewlyXstore"
-Title.TextColor3 = Color3.new(1,1,1)
-Title.Size = UDim2.new(1,0,0,40)
-Title.BackgroundTransparency = 1
-Title.Font = Enum.Font.GothamBold
-Title.TextSize = 18
+local b = Instance.new("TextButton",sidebar)
 
--- CONTENT
+b.Size = UDim2.new(1,-10,0,40)
 
-local Content = Instance.new("Frame",Main)
-Content.Position = UDim2.new(0,180,0,0)
-Content.Size = UDim2.new(1,-180,1,0)
-Content.BackgroundTransparency = 1
+b.Text = name
 
-local List = Instance.new("UIListLayout",Content)
-List.Padding = UDim.new(0,10)
+b.BackgroundColor3 = Color3.fromRGB(30,30,30)
 
--- BUTTON CREATOR
+b.TextColor3 = Color3.new(1,1,1)
 
-function CreateToggle(name,callback)
+b.Font = Enum.Font.Gotham
 
-local Btn = Instance.new("TextButton",Content)
-Btn.Size = UDim2.new(1,-20,0,40)
-Btn.Text = name.." : OFF"
-Btn.Font = Enum.Font.Gotham
-Btn.TextSize = 14
-Btn.TextColor3 = Color3.new(1,1,1)
-Btn.BackgroundColor3 = Color3.fromRGB(35,35,35)
+b.TextSize = 14
 
-Instance.new("UICorner",Btn)
+Instance.new("UICorner",b)
 
-local state=false
+return b
 
-Btn.MouseButton1Click:Connect(function()
+end
 
-state=not state
+Tab("Movement")
+Tab("ESP")
+Tab("Combat")
+Tab("Settings")
 
-Btn.Text = name.." : "..(state and "ON" or "OFF")
+-- PANEL
+local panel = Instance.new("Frame",main)
+panel.Position = UDim2.new(0,180,0,10)
+panel.Size = UDim2.new(1,-190,1,-20)
+panel.BackgroundTransparency = 1
+
+local layout2 = Instance.new("UIListLayout",panel)
+layout2.Padding = UDim.new(0,10)
+
+-- TOGGLE UI
+local function Toggle(name,callback)
+
+local f = Instance.new("Frame",panel)
+
+f.Size = UDim2.new(1,0,0,42)
+
+f.BackgroundColor3 = Color3.fromRGB(35,35,35)
+
+Instance.new("UICorner",f)
+
+local t = Instance.new("TextLabel",f)
+
+t.Text = name
+
+t.Size = UDim2.new(0.7,0,1,0)
+
+t.BackgroundTransparency = 1
+
+t.TextColor3 = Color3.new(1,1,1)
+
+t.Font = Enum.Font.Gotham
+
+local btn = Instance.new("TextButton",f)
+
+btn.Size = UDim2.new(0,60,0,24)
+
+btn.Position = UDim2.new(1,-70,0.5,-12)
+
+btn.Text = "OFF"
+
+btn.BackgroundColor3 = Color3.fromRGB(60,60,60)
+
+Instance.new("UICorner",btn)
+
+local state = false
+
+btn.MouseButton1Click:Connect(function()
+
+state = not state
+
+btn.Text = state and "ON" or "OFF"
+
+btn.BackgroundColor3 = state and Color3.fromRGB(0,170,255) or Color3.fromRGB(60,60,60)
 
 callback(state)
 
@@ -90,208 +135,110 @@ end)
 
 end
 
--- TOGGLES
+-- MOVEMENT
+Toggle("Fly",function(v) Fly=v end)
+Toggle("Turbo Fly",function(v) TurboFly=v end)
+Toggle("NoClip",function(v) NoClip=v end)
+Toggle("Infinite Jump",function(v) InfiniteJump=v end)
 
-CreateToggle("Fly",function(v)
-FlyEnabled=v
-end)
+-- ESP
+Toggle("Player ESP",function(v) ESP=v end)
+Toggle("Rainbow ESP",function(v) RainbowESP=v end)
 
-CreateToggle("Turbo Fly",function(v)
-TurboFly=v
-end)
-
-CreateToggle("NoClip",function(v)
-NoClip=v
-end)
-
-CreateToggle("Player ESP",function(v)
-ESPEnabled=v
-end)
-
-CreateToggle("Rainbow ESP",function(v)
-RainbowESP=v
-end)
-
-CreateToggle("Aimbot",function(v)
-Aimbot=v
-end)
-
--- SPEED SLIDER
-
-local Slider = Instance.new("TextButton",Content)
-Slider.Size = UDim2.new(1,-20,0,40)
-Slider.Text = "Speed : "..FlySpeed
-Slider.Font = Enum.Font.Gotham
-Slider.TextSize = 14
-Slider.TextColor3 = Color3.new(1,1,1)
-Slider.BackgroundColor3 = Color3.fromRGB(35,35,35)
-
-Instance.new("UICorner",Slider)
-
-Slider.MouseButton1Click:Connect(function()
-
-FlySpeed = FlySpeed + 20
-if FlySpeed > 200 then
-FlySpeed = 20
-end
-
-Slider.Text = "Speed : "..FlySpeed
-
-end)
+-- COMBAT
+Toggle("Aimbot",function(v) Aimbot=v end)
 
 -- FLY SYSTEM
-
 local BV
 local BG
 
-RunService.RenderStepped:Connect(function()
+local function StartFly()
 
-if FlyEnabled then
+local char = Player.Character
+local hrp = char:WaitForChild("HumanoidRootPart")
 
-local root = Character:FindFirstChild("HumanoidRootPart")
+BV = Instance.new("BodyVelocity",hrp)
+BV.MaxForce = Vector3.new(1e5,1e5,1e5)
 
-if not BV then
-
-BV = Instance.new("BodyVelocity",root)
-BG = Instance.new("BodyGyro",root)
-
-BV.MaxForce = Vector3.new(9e9,9e9,9e9)
-BG.MaxTorque = Vector3.new(9e9,9e9,9e9)
+BG = Instance.new("BodyGyro",hrp)
+BG.MaxTorque = Vector3.new(1e5,1e5,1e5)
 
 end
 
-local speed = TurboFly and FlySpeed*2 or FlySpeed
+RunService.RenderStepped:Connect(function()
 
-BV.Velocity = Camera.CFrame.LookVector*speed
+if Fly then
+
+if not BV then StartFly() end
+
+local dir = Vector3.zero
+
+if UIS:IsKeyDown(Enum.KeyCode.W) then dir+=Camera.CFrame.LookVector end
+if UIS:IsKeyDown(Enum.KeyCode.S) then dir-=Camera.CFrame.LookVector end
+if UIS:IsKeyDown(Enum.KeyCode.A) then dir-=Camera.CFrame.RightVector end
+if UIS:IsKeyDown(Enum.KeyCode.D) then dir+=Camera.CFrame.RightVector end
+
+local sp = TurboFly and Speed*2 or Speed
+
+BV.Velocity = dir * sp
 BG.CFrame = Camera.CFrame
-
-else
-
-if BV then BV:Destroy() BV=nil end
-if BG then BG:Destroy() BG=nil end
 
 end
 
 end)
 
 -- NOCLIP
-
 RunService.Stepped:Connect(function()
 
-if NoClip and Character then
-for _,v in pairs(Character:GetDescendants()) do
+if NoClip and Player.Character then
+
+for _,v in pairs(Player.Character:GetDescendants()) do
+
 if v:IsA("BasePart") then
+
 v.CanCollide=false
+
 end
+
 end
+
 end
 
 end)
 
--- ESP
+-- INFINITE JUMP
+UIS.JumpRequest:Connect(function()
 
-local ESP = {}
+if InfiniteJump then
 
-function CreateESP(plr)
-
-if plr == Player then return end
-
-local Box = Drawing.new("Square")
-Box.Thickness = 1
-Box.Filled = false
-
-local Name = Drawing.new("Text")
-Name.Size = 13
-Name.Center = true
-Name.Outline = true
-
-local Line = Drawing.new("Line")
-
-ESP[plr] = {Box=Box,Name=Name,Line=Line}
-
-end
-
-for _,p in pairs(Players:GetPlayers()) do
-CreateESP(p)
-end
-
-Players.PlayerAdded:Connect(CreateESP)
-
-RunService.RenderStepped:Connect(function()
-
-for plr,data in pairs(ESP) do
-
-local char = plr.Character
-
-if char and char:FindFirstChild("HumanoidRootPart") and ESPEnabled then
-
-local pos,vis = Camera:WorldToViewportPoint(char.HumanoidRootPart.Position)
-
-if vis then
-
-local dist = math.floor((Player.Character.HumanoidRootPart.Position - char.HumanoidRootPart.Position).Magnitude)
-
-local color = RainbowESP and Color3.fromHSV(tick()%5/5,1,1) or Color3.fromRGB(255,80,80)
-
-data.Box.Color = color
-data.Name.Color = color
-data.Line.Color = color
-
-data.Box.Size = Vector2.new(40,60)
-data.Box.Position = Vector2.new(pos.X-20,pos.Y-30)
-data.Box.Visible = true
-
-data.Name.Text = plr.Name.." ["..dist.."]"
-data.Name.Position = Vector2.new(pos.X,pos.Y-40)
-data.Name.Visible = true
-
-data.Line.From = Vector2.new(Camera.ViewportSize.X/2,Camera.ViewportSize.Y)
-data.Line.To = Vector2.new(pos.X,pos.Y)
-data.Line.Visible = true
-
-else
-
-data.Box.Visible=false
-data.Name.Visible=false
-data.Line.Visible=false
-
-end
-
-else
-
-data.Box.Visible=false
-data.Name.Visible=false
-data.Line.Visible=false
-
-end
+Player.Character:FindFirstChildOfClass("Humanoid"):ChangeState("Jumping")
 
 end
 
 end)
 
 -- AIMBOT
-
 RunService.RenderStepped:Connect(function()
 
-if not Aimbot then return end
+if Aimbot and UIS:IsMouseButtonPressed(AimKey) then
 
-local closest=nil
-local dist=FOV
+local closest
+local dist = FOV
 
-for _,plr in pairs(Players:GetPlayers()) do
+for _,v in pairs(Players:GetPlayers()) do
 
-if plr~=Player and plr.Character and plr.Character:FindFirstChild("Head") then
+if v ~= Player and v.Character and v.Character:FindFirstChild("HumanoidRootPart") then
 
-local pos,vis = Camera:WorldToViewportPoint(plr.Character.Head.Position)
+local pos,visible = Camera:WorldToViewportPoint(v.Character.HumanoidRootPart.Position)
 
-if vis then
+if visible then
 
-local mag = (Vector2.new(pos.X,pos.Y) - UIS:GetMouseLocation()).Magnitude
+local diff = (Vector2.new(pos.X,pos.Y)-Vector2.new(Mouse.X,Mouse.Y)).Magnitude
 
-if mag < dist then
+if diff < dist then
 
-dist = mag
-closest = plr.Character.Head
+dist = diff
+closest = v
 
 end
 
@@ -302,19 +249,28 @@ end
 end
 
 if closest then
-Camera.CFrame = CFrame.new(Camera.CFrame.Position,closest.Position)
+
+local target = closest.Character.HumanoidRootPart.Position
+
+Camera.CFrame = Camera.CFrame:Lerp(CFrame.new(Camera.CFrame.Position,target),Smooth)
+
+end
+
 end
 
 end)
 
 -- UI TOGGLE
-
 UIS.InputBegan:Connect(function(i,g)
 
 if g then return end
 
 if i.KeyCode == Enum.KeyCode.RightShift then
-Main.Visible = not Main.Visible
+
+main.Visible = not main.Visible
+
 end
 
 end)
+
+print("ViewlyXstore V5 Loaded")
