@@ -1,246 +1,180 @@
--- ViewlyXstore V3 Hub
--- UI Framework + Tabs + Toggle + Slider + Keybind + Notification
+-- ViewlyXstore V2
 
-local UIS = game:GetService("UserInputService")
-local TweenService = game:GetService("TweenService")
 local Players = game:GetService("Players")
+local UIS = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
 
-local player = Players.LocalPlayer
+local lp = Players.LocalPlayer
+local char = lp.Character or lp.CharacterAdded:Wait()
 
--- GUI
-local gui = Instance.new("ScreenGui")
+-- SETTINGS
+local flySpeed = 80
+local walkSpeed = 16
+local flying = false
+local esp = false
+local infJump = false
+
+-- UI
+local gui = Instance.new("ScreenGui", game.CoreGui)
 gui.Name = "ViewlyXstore"
-gui.ResetOnSpawn = false
-gui.Parent = game.CoreGui
 
--- MAIN FRAME
-local main = Instance.new("Frame",gui)
-main.Size = UDim2.new(0,420,0,320)
-main.Position = UDim2.new(0.5,-210,0.5,-160)
-main.BackgroundColor3 = Color3.fromRGB(22,22,22)
-main.BorderSizePixel = 0
+local frame = Instance.new("Frame", gui)
+frame.Size = UDim2.new(0,260,0,230)
+frame.Position = UDim2.new(0,50,0,200)
+frame.BackgroundColor3 = Color3.fromRGB(25,25,25)
+frame.BorderSizePixel = 0
 
-Instance.new("UICorner",main).CornerRadius = UDim.new(0,8)
+local corner = Instance.new("UICorner",frame)
+corner.CornerRadius = UDim.new(0,8)
 
 -- TITLE
-local title = Instance.new("TextLabel",main)
-title.Size = UDim2.new(1,0,0,40)
+local title = Instance.new("TextLabel",frame)
+title.Size = UDim2.new(1,0,0,35)
+title.Text = "ViewlyXstore V2"
+title.TextColor3 = Color3.new(1,1,1)
 title.BackgroundTransparency = 1
-title.Text = "ViewlyXstore V3"
 title.Font = Enum.Font.GothamBold
 title.TextSize = 18
-title.TextColor3 = Color3.new(1,1,1)
 
--- TAB BAR
-local tabBar = Instance.new("Frame",main)
-tabBar.Size = UDim2.new(1,0,0,35)
-tabBar.Position = UDim2.new(0,0,0,40)
-tabBar.BackgroundTransparency = 1
-
--- CONTENT
-local content = Instance.new("Frame",main)
-content.Size = UDim2.new(1,0,1,-75)
-content.Position = UDim2.new(0,0,0,75)
-content.BackgroundTransparency = 1
-
--- DRAG SYSTEM
-local drag = false
+-- DRAG
+local dragging
 local dragInput
-local start
+local dragStart
 local startPos
 
 title.InputBegan:Connect(function(input)
-	if input.UserInputType == Enum.UserInputType.MouseButton1 then
-		drag = true
-		start = input.Position
-		startPos = main.Position
-	end
+if input.UserInputType == Enum.UserInputType.MouseButton1 then
+dragging = true
+dragStart = input.Position
+startPos = frame.Position
+end
+end)
+
+title.InputEnded:Connect(function(input)
+if input.UserInputType == Enum.UserInputType.MouseButton1 then
+dragging = false
+end
 end)
 
 UIS.InputChanged:Connect(function(input)
-	if drag and input.UserInputType == Enum.UserInputType.MouseMovement then
-		local delta = input.Position - start
-		main.Position = UDim2.new(
-			startPos.X.Scale,
-			startPos.X.Offset + delta.X,
-			startPos.Y.Scale,
-			startPos.Y.Offset + delta.Y
-		)
-	end
+if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
+local delta = input.Position - dragStart
+frame.Position = UDim2.new(
+startPos.X.Scale,
+startPos.X.Offset + delta.X,
+startPos.Y.Scale,
+startPos.Y.Offset + delta.Y
+)
+end
 end)
 
-UIS.InputEnded:Connect(function(input)
-	if input.UserInputType == Enum.UserInputType.MouseButton1 then
-		drag = false
-	end
+-- BUTTON FUNCTION
+function createButton(text,pos,callback)
+
+local btn = Instance.new("TextButton",frame)
+btn.Size = UDim2.new(0,220,0,30)
+btn.Position = UDim2.new(0,20,0,pos)
+btn.Text = text
+btn.BackgroundColor3 = Color3.fromRGB(35,35,35)
+btn.TextColor3 = Color3.new(1,1,1)
+btn.Font = Enum.Font.Gotham
+btn.TextSize = 14
+
+local c = Instance.new("UICorner",btn)
+c.CornerRadius = UDim.new(0,6)
+
+btn.MouseButton1Click:Connect(callback)
+
+end
+
+-- FLY
+createButton("Toggle Fly",45,function()
+flying = not flying
 end)
 
--- KEYBIND (RightShift)
-UIS.InputBegan:Connect(function(input,gp)
-	if gp then return end
-	if input.KeyCode == Enum.KeyCode.RightShift then
-		main.Visible = not main.Visible
-	end
+RunService.RenderStepped:Connect(function()
+
+if flying and char:FindFirstChild("HumanoidRootPart") then
+
+local hrp = char.HumanoidRootPart
+local move = Vector3.new()
+
+if UIS:IsKeyDown(Enum.KeyCode.W) then
+move = move + workspace.CurrentCamera.CFrame.LookVector
+end
+
+if UIS:IsKeyDown(Enum.KeyCode.S) then
+move = move - workspace.CurrentCamera.CFrame.LookVector
+end
+
+if UIS:IsKeyDown(Enum.KeyCode.A) then
+move = move - workspace.CurrentCamera.CFrame.RightVector
+end
+
+if UIS:IsKeyDown(Enum.KeyCode.D) then
+move = move + workspace.CurrentCamera.CFrame.RightVector
+end
+
+hrp.Velocity = move * flySpeed
+
+end
 end)
 
--- TAB SYSTEM
-local tabs = {}
-local currentTab
+-- FLY SPEED
+createButton("Fly Speed +20",85,function()
+flySpeed = flySpeed + 20
+end)
 
-function createTab(name)
+createButton("Fly Speed -20",120,function()
+flySpeed = math.max(20,flySpeed-20)
+end)
 
-	local btn = Instance.new("TextButton",tabBar)
-	btn.Size = UDim2.new(0,120,1,0)
-	btn.Text = name
-	btn.BackgroundColor3 = Color3.fromRGB(30,30,30)
-	btn.TextColor3 = Color3.new(1,1,1)
-	btn.Font = Enum.Font.Gotham
-	btn.TextSize = 14
+-- SPEED
+createButton("Speed Toggle",155,function()
 
-	local page = Instance.new("Frame",content)
-	page.Size = UDim2.new(1,0,1,0)
-	page.Visible = false
-	page.BackgroundTransparency = 1
+local hum = char:FindFirstChild("Humanoid")
 
-	btn.MouseButton1Click:Connect(function()
+if hum.WalkSpeed == 16 then
+hum.WalkSpeed = 60
+else
+hum.WalkSpeed = 16
+end
 
-		if currentTab then
-			currentTab.Visible = false
-		end
+end)
 
-		page.Visible = true
-		currentTab = page
+-- ESP
+createButton("ESP Player",190,function()
 
-	end)
+esp = not esp
 
-	table.insert(tabs,btn)
+for i,v in pairs(Players:GetPlayers()) do
+if v ~= lp and v.Character then
 
-	if #tabs == 1 then
-		page.Visible = true
-		currentTab = page
-	end
+if esp then
 
-	for i,v in pairs(tabs) do
-		v.Position = UDim2.new(0,(i-1)*130,0,0)
-	end
+local h = Instance.new("Highlight")
+h.FillColor = Color3.fromRGB(255,0,0)
+h.Parent = v.Character
 
-	return page
+else
+
+local h = v.Character:FindFirstChildOfClass("Highlight")
+if h then h:Destroy() end
 
 end
 
--- UI ELEMENTS
-
-function createToggle(parent,text)
-
-	local btn = Instance.new("TextButton",parent)
-	btn.Size = UDim2.new(0,180,0,30)
-	btn.Text = text.." : OFF"
-	btn.BackgroundColor3 = Color3.fromRGB(35,35,35)
-	btn.TextColor3 = Color3.new(1,1,1)
-	btn.Font = Enum.Font.Gotham
-	btn.TextSize = 13
-
-	local state = false
-
-	btn.MouseButton1Click:Connect(function()
-
-		state = not state
-		btn.Text = text.." : "..(state and "ON" or "OFF")
-
-	end)
-
-	return btn
-
+end
 end
 
-function createSlider(parent,text,min,max)
+end)
 
-	local frame = Instance.new("Frame",parent)
-	frame.Size = UDim2.new(0,200,0,40)
-	frame.BackgroundTransparency = 1
+-- INFINITE JUMP
+createButton("Infinite Jump",225,function()
+infJump = not infJump
+end)
 
-	local label = Instance.new("TextLabel",frame)
-	label.Size = UDim2.new(1,0,0,20)
-	label.BackgroundTransparency = 1
-	label.Text = text.." : "..min
-	label.TextColor3 = Color3.new(1,1,1)
-	label.Font = Enum.Font.Gotham
-	label.TextSize = 12
-
-	local bar = Instance.new("Frame",frame)
-	bar.Size = UDim2.new(1,0,0,6)
-	bar.Position = UDim2.new(0,0,0,25)
-	bar.BackgroundColor3 = Color3.fromRGB(40,40,40)
-
-	local fill = Instance.new("Frame",bar)
-	fill.Size = UDim2.new(0,0,1,0)
-	fill.BackgroundColor3 = Color3.fromRGB(0,170,255)
-
-	local value = min
-
-	bar.InputBegan:Connect(function(input)
-		if input.UserInputType == Enum.UserInputType.MouseButton1 then
-
-			local pos = (input.Position.X - bar.AbsolutePosition.X)/bar.AbsoluteSize.X
-			pos = math.clamp(pos,0,1)
-
-			fill.Size = UDim2.new(pos,0,1,0)
-
-			value = math.floor(min + (max-min)*pos)
-
-			label.Text = text.." : "..value
-
-		end
-	end)
-
-	return frame
-
+UIS.JumpRequest:Connect(function()
+if infJump then
+char:FindFirstChildOfClass("Humanoid"):ChangeState("Jumping")
 end
-
--- NOTIFICATION
-function notify(msg)
-
-	local note = Instance.new("TextLabel",gui)
-	note.Size = UDim2.new(0,260,0,40)
-	note.Position = UDim2.new(1,-270,1,-80)
-	note.BackgroundColor3 = Color3.fromRGB(30,30,30)
-	note.TextColor3 = Color3.new(1,1,1)
-	note.Text = msg
-	note.Font = Enum.Font.Gotham
-	note.TextSize = 14
-
-	Instance.new("UICorner",note)
-
-	TweenService:Create(note,TweenInfo.new(.4),{
-		Position = UDim2.new(1,-270,1,-120)
-	}):Play()
-
-	task.wait(3)
-
-	note:Destroy()
-
-end
-
--- CREATE TABS
-local playerTab = createTab("Player")
-local visualTab = createTab("Visual")
-local settingsTab = createTab("Settings")
-
--- PLAYER TAB
-local t1 = createToggle(playerTab,"Feature Toggle")
-t1.Position = UDim2.new(0,10,0,10)
-
-local s1 = createSlider(playerTab,"Speed",10,200)
-s1.Position = UDim2.new(0,10,0,60)
-
--- VISUAL TAB
-local t2 = createToggle(visualTab,"Visual Toggle")
-t2.Position = UDim2.new(0,10,0,10)
-
--- SETTINGS TAB
-local t3 = createToggle(settingsTab,"Enable UI Effects")
-t3.Position = UDim2.new(0,10,0,10)
-
-notify("ViewlyXstore V3 Loaded")
-
-print("ViewlyXstore V3 Hub Ready")
+end)
